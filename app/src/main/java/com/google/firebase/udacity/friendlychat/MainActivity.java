@@ -16,6 +16,7 @@
 package com.google.firebase.udacity.friendlychat;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
@@ -34,6 +35,7 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.firebase.ui.auth.AuthUI;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.ChildEventListener;
@@ -41,6 +43,9 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -62,11 +67,16 @@ public class MainActivity extends AppCompatActivity {
 
     private String mUsername;
 
+    private static final int RC_PHOTO_PICKER =  2;
+
     private FirebaseDatabase mFirebaseDatabase;
     private DatabaseReference mMessageDatabaseReference;
     private ChildEventListener mChildEventListner;
     private FirebaseAuth mFireBaseAuth;
     private FirebaseAuth.AuthStateListener mAuthStateListner;
+
+    private FirebaseStorage firebaseStorage;
+    private StorageReference photoStorageReference;
 
     public static final int RC_SIGN_IN = 1;
 
@@ -86,6 +96,9 @@ public class MainActivity extends AppCompatActivity {
         mFirebaseDatabase = FirebaseDatabase.getInstance();
         mMessageDatabaseReference = mFirebaseDatabase.getReference().child("message");
         mFireBaseAuth = FirebaseAuth.getInstance();
+
+        firebaseStorage = FirebaseStorage.getInstance();
+        photoStorageReference = firebaseStorage.getReference().child("Chat_Photos");
 
         // Initialize references to views
         mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
@@ -107,6 +120,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 // TODO: Fire an intent to show an image picker
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("Image/jpeg");
+                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+                startActivityForResult(Intent.createChooser(intent, "Complete action using"), RC_PHOTO_PICKER);
             }
         });
 
@@ -178,6 +195,23 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "Sign in canceled", Toast.LENGTH_SHORT).show();
                 finish();
             }
+        } else if (requestCode == RC_PHOTO_PICKER){
+            Uri imageUri = data.getData();
+
+            // Get Reference to store image
+            StorageReference imageReference = photoStorageReference.child(imageUri.getLastPathSegment());
+
+            // Upload it to the storage
+            imageReference.putFile(imageUri).addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                @Override
+                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                    // Getting the download URL for the image
+                    Uri downloadedUri = taskSnapshot.getDownloadUrl();
+
+                    FriendlyMessage friendlyMessage = new FriendlyMessage(null, mUsername, downloadedUri.toString());
+                    mMessageDatabaseReference.push().setValue(friendlyMessage);
+                }
+            });
         }
     }
 
