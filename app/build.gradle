@@ -56,6 +56,10 @@ dependencies {
     compile 'com.firebaseui:firebase-ui-auth:3.0.0'
     // For Firebase Storage
     compile 'com.google.firebase:firebase-storage:11.4.2'
+    // For Push Notifications
+    compile 'com.google.firebase:firebase-messaging:11.4.2'
+    // For Remote configuration
+    compile 'com.google.firebase:firebase-config:11.4.2'
 }
 
 apply plugin: 'com.google.gms.google-services'
